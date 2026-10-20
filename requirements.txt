@@ -1,0 +1,12 @@
+numpy
+pandas
+xarray
+netCDF4
+matplotlib
+geopandas
+shapely
+imdlib
+cdsapi
+scikit-learn
+xgboost
+shap
