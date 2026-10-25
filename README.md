@@ -2,9 +2,9 @@
 
 Can atmospheric precursors 1 to 3 days ahead tell us when an extreme rain day is coming over the Chenab and Ravi catchments (western Himalaya, upstream of Punjab, Pakistan)? This repository trains and explains machine learning models on 47 monsoon seasons (1979-2025), with the August-September 2025 Punjab floods as an independent test.
 
-> **Status:** first baseline (October 2026). Results are preliminary and will be updated.
+> **Status:** October 2026. Baseline (ML01-ML06) and combined model with spell-onset test (ML07) complete.
 
-![2025 forecast](figures/ml05_forecast_2025.png)
+![2025 forecast](figures/ml07_forecast_2025.png)
 
 ## Data
 
@@ -24,18 +24,35 @@ Can atmospheric precursors 1 to 3 days ahead tell us when an extreme rain day is
 - **Scores for a rare event (base rate 5%):** ROC AUC, PR AUC, Brier skill score, hit rate of the 5% highest-probability days.
 - **Explainability:** SHAP (TreeExplainer) for XGBoost, globally and for the 2025 flood episodes.
 
-## First results (cross-validated, 1979-2024)
+## Results (cross-validated, 1979-2024)
 
 | Model | ROC AUC | PR AUC | Brier skill score | Top-5% days that were extreme |
 |---|---|---|---|---|
-| Persistence (yesterday's rain) | 0.76 | 0.22 | 0.07 | 29% |
-| Logistic regression, leads 1-3 days | **0.81** | 0.20 | 0.07 | 22% |
-| Random forest | 0.80 | 0.20 | 0.08 | 24% |
-| XGBoost | 0.80 | 0.19 | 0.07 | 24% |
+| Persistence (rain 1-3 days before) | 0.79 | 0.22 | 0.09 | 29% |
+| Precursors only, logistic regression | 0.81 | 0.20 | 0.07 | 22% |
+| Random forest (precursors) | 0.80 | 0.20 | 0.08 | 24% |
+| XGBoost (precursors) | 0.80 | 0.19 | 0.07 | 24% |
+| Combined precursors + persistence, logistic regression | **0.83** | 0.24 | 0.09 | 28% |
+| **Combined precursors + persistence, XGBoost** | **0.83** | **0.25** | **0.11** | **31%** |
 
-- Atmospheric precursors alone give clear skill (ROC AUC about 0.8; PR AUC about 4 times the base rate). Non-linear models do not beat logistic regression with these box-mean features, so the limit is the information in the features rather than the model.
-- Persistence catches more of the strongest days because extreme days come in multi-day spells; the precursor models instead rise **before** a spell starts. Combining both is the next step.
-- **2025 floods:** for the peak days of the two episodes (26 August and 2 September 2025) the XGBoost probability rose to 0.29 and 0.34, about 6-7 times climatology.
+Base rate (climatological probability of an extreme day) is 0.05, so a PR AUC of 0.25 is five times the base rate.
+
+### Spell onsets: where precursors matter
+
+Of the 281 extreme days, **202 (72%) are spell onsets** (the previous day was not extreme). Persistence cannot anticipate these.
+
+| Model | Onset ROC AUC | Onsets in top-5% warnings |
+|---|---|---|
+| Persistence | 0.71 | 2% |
+| Precursors only (logistic regression) | 0.77 | 12% |
+| Combined (XGBoost) | 0.78 | 13% |
+
+- Combining atmospheric precursors with recent rainfall gives the best overall skill (ROC AUC 0.83, Brier skill score 0.11).
+- Precursors capture about **six times more spell-onset extremes** than persistence, which almost never anticipates them. Recent rain helps once a spell has begun; only the atmosphere gives warning before it starts.
+- In the combined model, SHAP attributes 70% of the signal to atmospheric precursors, 23% to persistence and 8% to season.
+- **2025 floods (independent test):** on the peak days of the two episodes (26 August and 2 September 2025) the combined probability rose to 0.29 and 0.30, about six times climatology.
+
+![SHAP combined model](figures/ml07_shap_beeswarm.png)
 
 ## What the model learned (SHAP)
 
@@ -58,12 +75,13 @@ The most important precursors are 700 hPa humidity and water vapour over the cat
 | `ML04_LogReg_Baseline.ipynb` | logistic regression vs persistence, reliability, 2025 test |
 | `ML05_Trees_RF_XGB.ipynb` | random forest and XGBoost, skill by year |
 | `ML06_SHAP_Explain.ipynb` | SHAP explanations and summary |
+| `ML07_Combined_Persistence.ipynb` | combines precursors with rain 1-3 days before, spell-onset test, final summary |
 
 Basin boundaries (shapefiles) are not included. The notebooks expect them in a Google Drive folder; any polygon of the Chenab and Ravi catchments can be used.
 
 ## Next steps
 
-- Combine precursors with persistence, and track the position of monsoon lows instead of a box mean.
+- Track the position of monsoon lows and western disturbances instead of box means.
 - Learn directly from gridded ERA5 and satellite (IMERG, Meteosat) fields with convolutional networks.
 - Extend to the Beas and Sutlej catchments and test longer leads.
 
